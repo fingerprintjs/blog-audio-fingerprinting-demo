@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "node",
+    "target": "es5",
+    "jsx": "react",
+    "sourceMap": true,
+    "removeComments": false,
+    "resolveJsonModule": true,
+    "importHelpers": true,
+    "noErrorTruncation": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true
+  },
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}
