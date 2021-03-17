@@ -2,6 +2,7 @@ import memoizeObjectArguments from '../../../utils/memoize_object_arguments'
 import { chartSidePadding, chartDateScaleLabelMargin, chartMapHeight, chartMapBottom } from '../../style'
 import drawIndexScale from './index_scale'
 import drawMapSelector from './map_selector'
+import makeFade from './fade'
 
 interface Options {
   x: number
@@ -14,12 +15,16 @@ interface Options {
   startIndex: number
   endIndex: number
   indexNotchScale: number
+  getIndexLabel: (index: number) => string
   _: unknown
 }
 
 export default function makeChartX(ctx: CanvasRenderingContext2D): (options: Options) => void {
+  const drawLeftFade = makeFade(ctx, 'left')
+  const drawRightFade = makeFade(ctx, 'right')
+
   return memoizeObjectArguments(
-    ({ x, y, width, height, pixelRatio, minIndex, maxIndex, startIndex, endIndex, indexNotchScale }) => {
+    ({ x, y, width, height, pixelRatio, minIndex, maxIndex, startIndex, endIndex, indexNotchScale, getIndexLabel }) => {
       ctx.clearRect(x, y, width, height)
 
       drawIndexScale({
@@ -33,7 +38,11 @@ export default function makeChartX(ctx: CanvasRenderingContext2D): (options: Opt
         toIndex: endIndex,
         notchScale: indexNotchScale,
         pixelRatio,
+        getIndexLabel,
       })
+
+      drawLeftFade(x, y, chartSidePadding * pixelRatio, height)
+      drawRightFade(x + width - chartSidePadding * pixelRatio, y, chartSidePadding * pixelRatio, height)
 
       if (minIndex !== maxIndex) {
         drawMapSelector({

@@ -2,7 +2,8 @@ export interface Line {
   name: string
   color: number // RGB integer
   values: ArrayLike<number>
-  enabled: boolean
+  draw: boolean
+  showInPopup: boolean
 }
 
 export type LinesList = readonly Readonly<Line>[]

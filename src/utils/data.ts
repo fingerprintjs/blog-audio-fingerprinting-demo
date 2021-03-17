@@ -120,3 +120,7 @@ export function toggleArrayItem<T>(array: readonly T[], item: T): T[] {
     return [...array.slice(0, index), ...array.slice(index + 1)]
   }
 }
+
+export function countTruthy(values: unknown[]): number {
+  return values.reduce<number>((sum, value) => sum + (value ? 1 : 0), 0)
+}

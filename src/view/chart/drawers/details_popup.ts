@@ -37,6 +37,7 @@ interface Options {
   opacity: number
   x: number
   y: number
+  getIndexLabel: (index: number) => string
 }
 
 /**
@@ -55,6 +56,7 @@ export default function drawDetailsPopup({
   opacity,
   x,
   y,
+  getIndexLabel,
 }: Options): void {
   if (opacity === 0) {
     return
@@ -80,6 +82,7 @@ export default function drawDetailsPopup({
     opacity,
     x + sidePadding,
     y + chartDetailsPopupHeaderBaselineY * pixelRatio,
+    getIndexLabel,
   )
 
   let rowY = y + chartDetailsPopupFirstRowBaselineY * pixelRatio
@@ -152,6 +155,7 @@ function drawHeader(
   opacity: number,
   x: number,
   y: number,
+  getIndexLabel: (index: number) => string,
 ) {
   const fontSize = chartDetailsPopupHeaderFontSize * pixelRatio
   const baseline = 'alphabetic'
@@ -180,7 +184,7 @@ function drawHeader(
     color: textColor,
     opacity,
     position: index,
-    getItemText: formatNumberWithThousandGroups,
+    getItemText: getIndexLabel,
   })
 }
 

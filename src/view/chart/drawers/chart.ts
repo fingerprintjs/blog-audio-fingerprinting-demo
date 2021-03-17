@@ -1,4 +1,5 @@
 import memoizeOne from 'memoize-one'
+import { formatNumberWithThousandGroups } from '../../../utils/number'
 import {
   chartMainLinesBottomMargin,
   chartMapHeight,
@@ -18,6 +19,7 @@ import drawDetailsPopup from './details_popup'
 
 interface Options {
   linesData: LinesList
+  indexNameOffset: number
   mainCanvasWidth: number
   mainCanvasHeight: number
   mapCanvasWidth: number
@@ -42,7 +44,7 @@ interface Options {
 export default function makeChart(
   mainCanvas: HTMLCanvasElement,
   mapCanvas: HTMLCanvasElement,
-): (options: Options, lineOpacities: readonly number[]) => void {
+): (options: Options, lineOpacities: readonly number[], detailsLineOpacities: readonly number[]) => void {
   const mainCtx = mainCanvas.getContext('2d')
   const mapCtx = mapCanvas.getContext('2d')
 
@@ -61,6 +63,11 @@ export default function makeChart(
     mapCanvas.height = height
   })
 
+  // The goal is to keep the save reference when possible to leverage the shallow memoization
+  const makeGetIndexLabel = memoizeOne((indexNameOffset: number) => {
+    return (index: number) => formatNumberWithThousandGroups(index + indexNameOffset)
+  })
+
   // The parts of the chart that can be updated independently
   const drawChartMainWithoutX = makeChartMainWithoutX(mainCtx)
   const drawChartX = makeChartX(mainCtx)
@@ -72,6 +79,7 @@ export default function makeChart(
   return (
     {
       linesData,
+      indexNameOffset,
       mainCanvasWidth,
       mainCanvasHeight,
       mapCanvasWidth,
@@ -92,11 +100,13 @@ export default function makeChart(
       detailsOpacity,
     },
     lineOpacities,
+    detailsLineOpacities,
   ) => {
     const mainSectionY = chartMainTopMargin * pixelRatio
     const mainSectionHeight =
       mainCanvasHeight - (chartMainLinesBottomMargin + chartMapHeight + chartMapBottom) * pixelRatio - mainSectionY
     const doDrawDetailsPopup = detailsOpacity > 0 && detailsIndex !== null
+    const getIndexLabel = makeGetIndexLabel(indexNameOffset)
 
     updateMainCanvasSize(mainCanvasWidth, mainCanvasHeight)
     updateMapCanvasSize(mapCanvasWidth, mapCanvasHeight)
@@ -141,6 +151,7 @@ export default function makeChart(
       endIndex,
       indexNotchScale,
       pixelRatio,
+      getIndexLabel,
       _: forceRedrawMainCanvas,
     })
 
@@ -151,9 +162,10 @@ export default function makeChart(
         y: chartDetailsPopupY * pixelRatio,
         ctx: mainCtx,
         pixelRatio,
-        lineOpacities,
+        lineOpacities: detailsLineOpacities,
         index: detailsIndex,
         opacity: detailsOpacity,
+        getIndexLabel,
       })
     }
 

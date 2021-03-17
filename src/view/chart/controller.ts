@@ -16,7 +16,7 @@ import makeChartDrawer from './drawers/chart'
 import watchGestures, { GestureWatcher, ChartGestureState } from './watch_gestures'
 import { LinesList } from './types'
 
-const minMapSelectionLength = 5
+const minMapSelectionLength = 10
 const maxMapSelectionLength = 500
 
 type LinesMinAndMax = readonly Readonly<{ min: number; max: number }>[]
@@ -36,6 +36,7 @@ type AnimatedWriteState = Parameters<ReturnType<typeof createAnimatedState>['mov
 export default class Controller {
   // Outside properties:
   private lines: LinesList = []
+  private indexNameOffset: number
 
   // User input state:
   private startIndex = 0 // Start of the selected map area
@@ -66,7 +67,10 @@ export default class Controller {
     private mainCanvas: HTMLCanvasElement,
     private mapCanvas: HTMLCanvasElement,
     lines: LinesList,
+    /** What's the real index of the first line values */
+    indexNameOffset = 0,
   ) {
+    this.indexNameOffset = indexNameOffset
     this.setDomState()
     this.setLinesState(lines, true)
     this.animatedState = createAnimatedState(lines.length, this.render.bind(this))
@@ -84,8 +88,9 @@ export default class Controller {
     this.render()
   }
 
-  public setLines(lines: LinesList): void {
+  public setLines(lines: LinesList, indexNameOffset = 0): void {
     this.setLinesState(lines, false)
+    this.indexNameOffset = indexNameOffset
     this.handleStateChange()
   }
 
@@ -173,18 +178,21 @@ export default class Controller {
       this.detailsIndex = null
     } else {
       const index = this.startIndex + (this.endIndex - this.startIndex) * relativeX
-      const indexRange = this.getIndexRange(this.lines)
-      this.detailsIndex = inRange(indexRange.min, Math.round(index), indexRange.max)
+      this.detailsIndex = inRange(Math.ceil(this.startIndex), Math.round(index), Math.floor(this.endIndex))
     }
-    this.handleStateChange()
+    this.handleStateChange(true)
   }
 
   /**
-   * Must be called when a property that reflects the chart state changes
+   * Must be called when a property that reflects the chart state changes.
+   *
+   * Toggle `dontForceRender` when you change a state that never requires rendering without running animations.
    */
-  private handleStateChange() {
+  private handleStateChange(dontForceRender?: boolean) {
     this.animatedState.moveTo(this.getAnimatedStateTarget())
-    this.animatedState.updateOnNextFrame() // For a case when no transitions are triggered
+    if (!dontForceRender) {
+      this.animatedState.updateOnNextFrame()
+    }
     this.gesturesWatcher.setChartState(this.getStateForGestureWatcher())
   }
 
@@ -192,7 +200,7 @@ export default class Controller {
    * Returns the state to which the animations should be going
    */
   private getAnimatedStateTarget() {
-    const detailsPosition = getDetailsPosition(this.detailsIndex, this.startIndex, this.endIndex)
+    const detailsPosition = getDetailsPosition(this.lines, this.detailsIndex, this.startIndex, this.endIndex)
     const target: AnimatedWriteState = {
       lineOpacities: this.getLineOpacities(this.lines),
       indexNotchScale: getIndexNotchScale(this.startIndex, this.endIndex, this.mainCanvasWidth),
@@ -233,7 +241,10 @@ export default class Controller {
       mapValueSize,
       mainValueMiddle,
       mainValueSize,
-      detailsPosition: [{ index: detailsIndex, align: detailsAlign }, detailsOpacity],
+      detailsPosition: [
+        { index: detailsIndex, align: detailsAlign, lineOpacities: detailsLineOpacities },
+        detailsOpacity,
+      ],
       ...restAnimatedState
     } = this.animatedState.getState()
 
@@ -243,6 +254,7 @@ export default class Controller {
       {
         ...restAnimatedState,
         linesData: this.lines,
+        indexNameOffset: this.indexNameOffset,
         mainCanvasWidth: this.mainCanvasWidth * this.pixelRatio,
         mainCanvasHeight: this.mainCanvasHeight * this.pixelRatio,
         mapCanvasWidth: this.mapCanvasWidth * this.pixelRatio,
@@ -260,7 +272,8 @@ export default class Controller {
         detailsAlign,
         detailsOpacity,
       },
-      Object.keys(lineOpacities).map((key) => lineOpacities[(key as unknown) as number]),
+      Object.values(lineOpacities),
+      Object.values(detailsLineOpacities),
     )
   }
 }
@@ -309,7 +322,7 @@ function getInitialIndexRange(min: number, max: number): { start: number; end: n
 function getLineOpacities(lines: LinesList) {
   const opacities: Record<number, number> = {}
   for (let key = 0; key < lines.length; ++key) {
-    opacities[key] = lines[key].enabled ? 1 : 0
+    opacities[key] = lines[key].draw ? 1 : 0
   }
   return opacities
 }
@@ -319,7 +332,7 @@ function getMapValueRange(lines: LinesList, linesMinAndMaxCache: LinesMinAndMax)
   let max = -Infinity
 
   for (let key = 0; key < lines.length; ++key) {
-    if (lines[key].enabled) {
+    if (lines[key].draw) {
       if (linesMinAndMaxCache[key].min < min) {
         min = linesMinAndMaxCache[key].min
       }
@@ -344,7 +357,7 @@ function getMainValueRange(lines: LinesList, startIndex: number, endIndex: numbe
   let totalMax = -Infinity
 
   for (let key = 0; key < lines.length; ++key) {
-    if (lines[key].enabled) {
+    if (lines[key].draw) {
       const { min, max } = getMinAndMaxOnRange(lines[key].values, startIndex, endIndex)
       if (min < totalMin) {
         totalMin = min
@@ -374,15 +387,22 @@ function getIndexNotchScale(startIndex: number, endIndex: number, canvasWidth: n
   )
 }
 
-function getDetailsPosition(detailsX: number | null, startIndex: number, endIndex: number) {
+function getDetailsPosition(lines: LinesList, detailsX: number | null, startIndex: number, endIndex: number) {
   if (detailsX === null) {
     return undefined
   }
 
   const relativePosition = (detailsX - startIndex) / (endIndex - startIndex)
+
+  const opacities: Record<number, number> = {}
+  for (let key = 0; key < lines.length; ++key) {
+    opacities[key] = lines[key].showInPopup ? 1 : 0
+  }
+
   return {
     index: detailsX,
     align: relativePosition > 0.5 ? 0 : 1,
+    lineOpacities: opacities,
   }
 }
 
@@ -391,8 +411,10 @@ function getDetailsPosition(detailsX: number | null, startIndex: number, endInde
  */
 function createAnimatedState(linesCount: number, render: () => void) {
   const lineOpacitiesTransitions: Record<number, Animation<number>> = {}
+  const detailsLineOpacitiesTransitions: Record<number, Animation<number>> = {}
   for (let key = 0; key < linesCount; ++key) {
     lineOpacitiesTransitions[key] = makeTransition(1)
+    detailsLineOpacitiesTransitions[key] = makeTransition(1)
   }
 
   const defaultValueMiddle = 0
@@ -414,11 +436,9 @@ function createAnimatedState(linesCount: number, render: () => void) {
       indexNotchScale: makeTransition(0),
       detailsPosition: makeInstantWhenHiddenTransition(
         makeTransitionGroup({
-          index: makeTransition(0, {
-            easing: easeCubicOut,
-            duration: 300,
-          }),
+          index: makeTransition(0, { easing: easeCubicOut, duration: 300 }),
           align: makeTransition(0),
+          lineOpacities: makeTransitionGroup(detailsLineOpacitiesTransitions),
         }),
         makeTransition(0, { duration: 300 }),
       ),

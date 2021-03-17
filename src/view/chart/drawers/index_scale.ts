@@ -1,6 +1,5 @@
 import { numberColorToRGBA } from '../../../utils/color'
 import { listSubDecimalNotchesForRange } from '../../../utils/scale'
-import { formatNumberWithThousandGroups } from '../../../utils/number'
 import {
   chartScaleLabelColor,
   chartScaleLabelFontSize,
@@ -20,6 +19,7 @@ interface Options {
   toIndex: number
   /** See the `getSubDecimalScale` function. It can be fractional, in this case a transitional state is rendered. */
   notchScale: number
+  getIndexLabel: (index: number) => string
 }
 
 export default function drawDateScale({
@@ -33,6 +33,7 @@ export default function drawDateScale({
   fromIndex,
   toIndex,
   notchScale,
+  getIndexLabel,
 }: Options): void {
   if (fromIndex === toIndex) {
     return
@@ -61,6 +62,6 @@ export default function drawDateScale({
     const x = fromX + (index - fromIndex) * xPerIndex
 
     ctx.fillStyle = numberColorToRGBA(chartScaleLabelColor, opacity)
-    ctx.fillText(formatNumberWithThousandGroups(index), Math.round(x), y)
+    ctx.fillText(getIndexLabel(index), Math.round(x), y)
   }
 }

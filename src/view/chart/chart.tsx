@@ -6,13 +6,15 @@ import * as style from './chart.css'
 
 interface Props {
   lines: readonly Readonly<Line>[]
+  /** The number to show under the first values on the chart */
+  actualFirstIndex?: number
   className?: string
 }
 
 /**
  * Draws a chart with lines.
  */
-function Chart({ lines, className = '' }: Props) {
+function Chart({ lines, actualFirstIndex = 0, className = '' }: Props) {
   const gestureContainerRef = React.useRef<HTMLDivElement>(null)
   const mainCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const mapCanvasRef = React.useRef<HTMLCanvasElement>(null)
@@ -20,16 +22,17 @@ function Chart({ lines, className = '' }: Props) {
 
   React.useEffect(() => {
     if (controllerRef.current) {
-      controllerRef.current.setLines(lines)
+      controllerRef.current.setLines(lines, actualFirstIndex)
     } else {
       controllerRef.current = new Controller(
         gestureContainerRef.current!,
         mainCanvasRef.current!,
         mapCanvasRef.current!,
         lines,
+        actualFirstIndex,
       )
     }
-  }, [lines])
+  }, [lines, actualFirstIndex])
 
   React.useEffect(() => {
     return () => controllerRef.current?.destroy()

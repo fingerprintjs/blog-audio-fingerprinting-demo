@@ -8,38 +8,15 @@ interface Options extends Omit<LineOption, 'values' | 'drawFromX' | 'drawToX' | 
   width: number
 }
 
-export default function drawLinesGroup({
-  ctx,
-  linesData,
-  lineOpacities,
-  x,
-  width,
-  fromX,
-  toX,
-  fromIndex,
-  toIndex,
-  fromY,
-  toY,
-  fromValue,
-  toValue,
-  lineWidth,
-}: Options): void {
-  for (let key = 0; key < linesData.length; ++key) {
+export default function drawLinesGroup({ linesData, lineOpacities, x, width, ...options }: Options): void {
+  // Render the lines in backward order so that the first line is rendered on top
+  for (let key = linesData.length - 1; key >= 0; --key) {
     drawLine({
-      ctx,
+      ...options,
       values: linesData[key].values,
-      fromX,
-      toX,
-      fromY,
-      toY,
       drawFromX: x,
       drawToX: x + width,
-      fromIndex,
-      toIndex,
-      fromValue,
-      toValue,
       color: linesData[key].color,
-      lineWidth,
       opacity: lineOpacities[key],
     })
   }

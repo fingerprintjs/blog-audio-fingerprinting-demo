@@ -3,7 +3,7 @@ import { chartSidePadding, chartMainLinesTopMargin, chartMainFadeHeight, chartMa
 import { LinesList } from '../types'
 import drawLinesGroup from './lines_group'
 import drawValueScale from './value_scale'
-import makeTopFade from './top_fade'
+import makeFade from './fade'
 import drawColumnPointerLine from './column_pointer_line'
 import drawColumnPointerCircles from './column_pointer_circles'
 
@@ -27,7 +27,9 @@ interface Options {
 export default function makeChartMainWithoutX(
   ctx: CanvasRenderingContext2D,
 ): (options: Options, lineOpacities: readonly number[]) => void {
-  const drawTopFade = makeTopFade(ctx)
+  const drawTopFade = makeFade(ctx, 'top')
+  const drawLeftFade = makeFade(ctx, 'left')
+  const drawRightFade = makeFade(ctx, 'right')
 
   return memoizeObjectArguments(
     (
@@ -94,6 +96,8 @@ export default function makeChartMainWithoutX(
       })
 
       drawTopFade(x, y, width, chartMainFadeHeight * pixelRatio)
+      drawLeftFade(x, y, x + width - mainLinesX - mainLinesWidth, height)
+      drawRightFade(mainLinesX + mainLinesWidth, y, x + width - mainLinesX - mainLinesWidth, height)
 
       ctx.restore()
 

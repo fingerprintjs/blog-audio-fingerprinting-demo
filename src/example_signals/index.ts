@@ -7,4 +7,4 @@ import safariMacos from './safari_macos'
 
 export { Signal } from './types'
 
-export default { chromeWindows, firefoxWindows, safariIos, chromeAndroid, chromeMacos, safariMacos }
+export default { chromeWindows, chromeAndroid, chromeMacos, firefoxWindows, safariIos, safariMacos }

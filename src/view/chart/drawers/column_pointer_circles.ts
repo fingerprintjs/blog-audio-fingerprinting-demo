@@ -59,14 +59,9 @@ export default function drawLinesPointer({
   const pointBackgroundColor = getBackgroundColor()
   ctx.lineWidth = borderWidth
 
-  for (let key = 0; key < linesData.length; ++key) {
-    const lineOpacity = lineOpacities[key]
-    if (lineOpacity <= 0) {
-      continue
-    }
-
-    const { color, values } = linesData[key]
-    const value = interpolateLinear(values, index)
+  // Render the lines in backward order so that the first line is rendered on top
+  for (let key = linesData.length - 1; key >= 0; --key) {
+    const value = interpolateLinear(linesData[key].values, index)
     if (value === undefined) {
       continue // Can happen when one line is longer than another
     }
@@ -74,8 +69,8 @@ export default function drawLinesPointer({
     const y = fromY + (value - fromValue) * yPerValue
     const scale = 0.3 + opacity * 0.7
 
-    ctx.fillStyle = numberColorToRGBA(pointBackgroundColor, lineOpacity * opacity)
-    ctx.strokeStyle = numberColorToRGBA(color, lineOpacity * opacity)
+    ctx.fillStyle = numberColorToRGBA(pointBackgroundColor, lineOpacities[key] * opacity)
+    ctx.strokeStyle = numberColorToRGBA(linesData[key].color, lineOpacities[key] * opacity)
     ctx.beginPath()
     ctx.arc(x, y, pointRadius * scale, 0, Math.PI * 2)
     ctx.fill()
