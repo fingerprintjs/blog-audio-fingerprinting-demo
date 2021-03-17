@@ -55,7 +55,6 @@ module.exports = (env, { mode = 'development' }) => ({
     ],
   },
   // A workaround for https://github.com/webpack/webpack-dev-server/issues/2758
-  // You need to build the application if you want to try it in a browser that doesn't support ES6.
   target: mode === 'development' ? 'web' : 'browserslist',
   optimization: {
     minimizer: [
@@ -64,7 +63,6 @@ module.exports = (env, { mode = 'development' }) => ({
           format: {
             comments: false,
           },
-          safari10: true,
         },
       }),
       new CssMinimizerPlugin(),

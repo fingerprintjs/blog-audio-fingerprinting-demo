@@ -2,9 +2,9 @@
 
 ## Usage
 
-You need Node.js and Yarn to run the application.
+You need to install [Node.js](https://nodejs.org) and [Yarn](https://yarnpkg.com) to run the application.
 
-Install Yarn dependencies first.
+Install Yarn dependencies.
 Open this directory in a terminal and run:
 
 ```bash
@@ -17,7 +17,10 @@ yarn install
 yarn start
 ```
 
-Then open http://localhost:8080 in a browser.
+Then open one of the demos in a browser:
+- http://localhost:8080
+- http://localhost:8080/?demo=difference
+
 Press <kbd>Ctrl</kbd>+<kbd>C</kbd> in the terminal to stop.
 
 ### Production build

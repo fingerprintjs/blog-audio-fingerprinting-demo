@@ -1,0 +1,15 @@
+.box, :global(.loadingBox) {
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  color: #525362;
+}
+
+.box.full, :global(.loadingBox.fullAbsolute) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}

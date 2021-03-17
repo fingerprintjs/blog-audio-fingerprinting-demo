@@ -1,6 +1,17 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import 'promise-polyfill/src/polyfill'
-import App from './App'
+import DemoSelector from './view/demo_selector'
+import './view/global.css'
+import './view/loading_screen/loading_screen.css' // Required for the HTML code
 
-ReactDOM.render(React.createElement(App), document.querySelector('#app'))
+function start() {
+  // todo: Add error boundary
+  ReactDOM.render(React.createElement(DemoSelector), document.querySelector('#app'))
+}
+
+// Wait for the styles to load
+if (document.readyState === 'complete') {
+  start()
+} else {
+  addEventListener('load', start)
+}
