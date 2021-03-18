@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */ // ESLint glitches hare for some reason
 import * as React from 'react'
 import { toggleArrayItem } from '../../utils/data'
 import * as style from './toggle_button_group.css'

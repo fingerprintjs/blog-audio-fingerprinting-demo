@@ -7,12 +7,19 @@ interface Props {
   color: string
   text: string
   on: boolean
-  onClick(): void
-  onLongClick(): void
+  onClick?(): void
+  onLongClick?(): void
   className?: string
 }
 
-export default function ToggleButton({ color, text, on, onClick, onLongClick, className = '' }: Props) {
+export default function ToggleButton({
+  color,
+  text,
+  on,
+  onClick,
+  onLongClick,
+  className = '',
+}: Props): React.ReactElement {
   const buttonRef = React.useRef<HTMLButtonElement>(null)
 
   // In order not to reestablish the event listeners when the callback change
@@ -23,9 +30,10 @@ export default function ToggleButton({ color, text, on, onClick, onLongClick, cl
 
   React.useEffect(() => {
     return watchLongTap(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       buttonRef.current!,
-      () => onClickRef.current(),
-      () => onLongClickRef.current(),
+      () => onClickRef.current?.(),
+      () => onLongClickRef.current?.(),
     ).destroy
   }, [])
 

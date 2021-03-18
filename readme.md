@@ -19,6 +19,8 @@ yarn start
 
 Then open one of the demos in a browser:
 - http://localhost:8080
+- http://localhost:8080/?demo=oscillator-options
+- http://localhost:8080/?demo=dynamics-compressor-options
 - http://localhost:8080/?demo=difference
 
 Press <kbd>Ctrl</kbd>+<kbd>C</kbd> in the terminal to stop.

@@ -16,9 +16,6 @@ import makeChartDrawer from './drawers/chart'
 import watchGestures, { GestureWatcher, ChartGestureState } from './watch_gestures'
 import { LinesList } from './types'
 
-const minMapSelectionLength = 10
-const maxMapSelectionLength = 500
-
 type LinesMinAndMax = readonly Readonly<{ min: number; max: number }>[]
 type AnimatedWriteState = Parameters<ReturnType<typeof createAnimatedState>['moveTo']>[0]
 
@@ -36,7 +33,9 @@ type AnimatedWriteState = Parameters<ReturnType<typeof createAnimatedState>['mov
 export default class Controller {
   // Outside properties:
   private lines: LinesList = []
-  private indexNameOffset: number
+  private indexNameOffset = 0
+  private minIndexRange = 10
+  private maxIndexRange = 500
 
   // User input state:
   private startIndex = 0 // Start of the selected map area
@@ -68,11 +67,12 @@ export default class Controller {
     private mapCanvas: HTMLCanvasElement,
     lines: LinesList,
     /** What's the real index of the first line values */
-    indexNameOffset = 0,
+    indexNameOffset?: number,
+    minIndexRange?: number,
+    maxIndexRange?: number,
   ) {
-    this.indexNameOffset = indexNameOffset
     this.setDomState()
-    this.setLinesState(lines, true)
+    this.setLinesState(lines, indexNameOffset, minIndexRange, maxIndexRange, true)
     this.animatedState = createAnimatedState(lines.length, this.render.bind(this))
     this.animatedState.moveTo(this.getAnimatedStateTarget(), true)
     this.gesturesWatcher = watchGestures(gestureContainer, this.getStateForGestureWatcher(), {
@@ -88,9 +88,8 @@ export default class Controller {
     this.render()
   }
 
-  public setLines(lines: LinesList, indexNameOffset = 0): void {
-    this.setLinesState(lines, false)
-    this.indexNameOffset = indexNameOffset
+  public setLines(lines: LinesList, indexNameOffset?: number, minIndexRange?: number, maxIndexRange?: number): void {
+    this.setLinesState(lines, indexNameOffset, minIndexRange, maxIndexRange, false)
     this.handleStateChange()
   }
 
@@ -103,18 +102,32 @@ export default class Controller {
     this.gesturesWatcher.destroy()
   }
 
-  private setLinesState(lines: LinesList, isInitial: boolean) {
+  private setLinesState(
+    lines: LinesList,
+    indexNameOffset: number | undefined,
+    minIndexRange: number | undefined,
+    maxIndexRange: number | undefined,
+    isInitial: boolean,
+  ) {
     if (!isInitial && this.lines.length !== lines.length) {
       throw new Error('Changing the number of lines is not implemented')
     }
 
     this.lines = lines
+    this.indexNameOffset = indexNameOffset ?? this.indexNameOffset
+    this.minIndexRange = minIndexRange ?? this.minIndexRange
+    this.maxIndexRange = maxIndexRange ?? this.maxIndexRange
 
     // Adjust the selected map range for the new lines
     const indexRange = this.getIndexRange(lines)
     const { start, end } = isInitial
-      ? getInitialIndexRange(indexRange.min, indexRange.max)
-      : fitRangeInRangeWhileKeepingLength(indexRange.min, indexRange.max, this.startIndex, this.endIndex)
+      ? getInitialIndexRange(indexRange.min, indexRange.max, this.minIndexRange, this.maxIndexRange)
+      : fitRangeInRangeWhileKeepingLength(
+          indexRange.min,
+          indexRange.max,
+          this.startIndex,
+          inRange(this.startIndex + this.minIndexRange, this.endIndex, this.startIndex + this.maxIndexRange),
+        )
     this.startIndex = start
     this.endIndex = end
   }
@@ -143,24 +156,16 @@ export default class Controller {
   private handleStartIndexMove(relativeX: number) {
     const indexRange = this.getIndexRange(this.lines)
     const index = indexRange.min + relativeX * (indexRange.max - indexRange.min)
-    this.startIndex = inRange(indexRange.min, index, indexRange.max - minMapSelectionLength)
-    this.endIndex = inRange(
-      this.startIndex + minMapSelectionLength,
-      this.endIndex,
-      this.startIndex + maxMapSelectionLength,
-    )
+    this.startIndex = inRange(indexRange.min, index, indexRange.max - this.minIndexRange)
+    this.endIndex = inRange(this.startIndex + this.minIndexRange, this.endIndex, this.startIndex + this.maxIndexRange)
     this.handleStateChange()
   }
 
   private handleEndIndexMove(relativeX: number) {
     const indexRange = this.getIndexRange(this.lines)
     const index = indexRange.min + relativeX * (indexRange.max - indexRange.min)
-    this.endIndex = inRange(indexRange.min + minMapSelectionLength, index, indexRange.max)
-    this.startIndex = inRange(
-      this.endIndex - maxMapSelectionLength,
-      this.startIndex,
-      this.endIndex - minMapSelectionLength,
-    )
+    this.endIndex = inRange(indexRange.min + this.minIndexRange, index, indexRange.max)
+    this.startIndex = inRange(this.endIndex - this.maxIndexRange, this.startIndex, this.endIndex - this.minIndexRange)
     this.handleStateChange()
   }
 
@@ -311,11 +316,16 @@ function makeGetLinesMinAndMax() {
   }
 }
 
-function getInitialIndexRange(min: number, max: number): { start: number; end: number } {
-  const length = inRange(minMapSelectionLength, (max - min) * 0.27, maxMapSelectionLength)
+function getInitialIndexRange(
+  minIndex: number,
+  maxIndex: number,
+  minLength: number,
+  maxLength: number,
+): { start: number; end: number } {
+  const length = inRange(minLength, (maxIndex - minIndex) * 0.27, maxLength)
   return {
-    start: max - length,
-    end: max,
+    start: maxIndex - length,
+    end: maxIndex,
   }
 }
 
@@ -425,15 +435,16 @@ function createAnimatedState(linesCount: number, render: () => void) {
     chartValueScaleMaxNotchCount,
   )
 
+  // In-easings aren't used for scales because in-easings stuck at start when new values come frequently
   return makeAnimationGroup(
     {
       lineOpacities: makeTransitionGroup(lineOpacitiesTransitions),
       mapValueMiddle: makeTransition(defaultValueMiddle),
       mapValueSize: makeExponentialTransition(defaultValueSize),
       mainValueMiddle: makeTransition((defaultMainYRange.min + defaultMainYRange.max) / 2),
-      mainValueSize: makeExponentialTransition(defaultMainYRange.max - defaultMainYRange.min),
-      mainValueNotchScale: makeTransition(defaultMainYRange.notchScale),
-      indexNotchScale: makeTransition(0),
+      mainValueSize: makeExponentialTransition(defaultMainYRange.max - defaultMainYRange.min, { easing: easeCubicOut }),
+      mainValueNotchScale: makeTransition(defaultMainYRange.notchScale, { easing: easeCubicOut }),
+      indexNotchScale: makeTransition(0, { easing: easeCubicOut }),
       detailsPosition: makeInstantWhenHiddenTransition(
         makeTransitionGroup({
           index: makeTransition(0, { easing: easeCubicOut, duration: 300 }),

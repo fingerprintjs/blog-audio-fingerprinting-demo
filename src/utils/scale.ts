@@ -1,4 +1,4 @@
-import { modulo, floorWithBase, ceilWithBase, roundWithBase } from './number'
+import { modulo, floorWithBase, ceilWithBase, removeFloatArtifact } from './number'
 
 const log10Of2 = Math.log10(2)
 const log10Of5 = Math.log10(5)
@@ -122,22 +122,14 @@ export function* listSubDecimalNotchesForRange(
   for (let notch1 = start1Notch, notch2 = start2Notch; notch1 <= maxValue || notch2 <= maxValue; ) {
     if (notch1 === notch2) {
       yield { value: notch1, opacity: 1 }
-      notch1 = alignValue(notch1 + notch1Size)
-      notch2 = alignValue(notch2 + notch2Size)
+      notch1 = removeFloatArtifact(notch1 + notch1Size)
+      notch2 = removeFloatArtifact(notch2 + notch2Size)
     } else if (notch1 < notch2) {
       yield { value: notch1, opacity: 1 - transition }
-      notch1 = alignValue(notch1 + notch1Size)
+      notch1 = removeFloatArtifact(notch1 + notch1Size)
     } else {
       yield { value: notch2, opacity: transition }
-      notch2 = alignValue(notch2 + notch2Size)
+      notch2 = removeFloatArtifact(notch2 + notch2Size)
     }
   }
-}
-
-/**
- * Aims to solve the 0.1 + 0.2 problem
- */
-function alignValue(value: number): number {
-  // The maximum required precision for this app is 1e-8
-  return roundWithBase(value, 1e-10)
 }

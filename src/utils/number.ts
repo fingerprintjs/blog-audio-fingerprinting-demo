@@ -66,3 +66,11 @@ export function formatNumberWithThousandGroups(number: number, divider = ' '): s
 
   return groupedInteger + (fractional ? `.${fractional}` : '')
 }
+
+/**
+ * Aims to solve the 0.1 + 0.2 problem
+ */
+export function removeFloatArtifact(value: number): number {
+  // The maximum required precision for this app is 1e-8
+  return roundWithBase(value, 1e-10)
+}

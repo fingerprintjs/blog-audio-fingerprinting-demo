@@ -6,6 +6,6 @@ interface Props {
   className?: string
 }
 
-export default function LoadingScreen({ fullAbsolute, className = '' }: Props) {
+export default function LoadingScreen({ fullAbsolute, className = '' }: Props): React.ReactElement {
   return <div className={`${styles.box} ${fullAbsolute ? styles.full : ''} ${className}`}>Loading...</div>
 }

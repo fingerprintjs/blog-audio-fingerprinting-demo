@@ -1,3 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const shallowEqual = require('shallowequal')
+import * as React from 'react'
 import { isDesktopSafari, isWebKit, isWebKit606OrNewer } from './browser'
 
 export interface OscillatorOptions {
@@ -110,4 +113,85 @@ function renderAudio(context: OfflineAudioContext) {
 
     tryResume()
   })
+}
+
+/**
+ * Renders audio signals sequentially.
+ *
+ * Null means that the signal is impossible to get.
+ * Undefined means that the no signal has been calculated yet.
+ */
+export function useAudioSignal(options: Options): Float32Array | null | undefined {
+  const [signal, setSignal] = React.useState<Float32Array | null>()
+  const queueRef = React.useRef<ReturnType<typeof makeRenderingQueue>>()
+
+  React.useEffect(() => {
+    queueRef.current = makeRenderingQueue((signal) => setSignal(signal || null))
+    return queueRef.current.stop
+  }, [])
+
+  React.useEffect(() => {
+    queueRef.current?.setOptions(options)
+  }, [options])
+
+  return signal
+}
+
+export function areOptionsEqual(options1: Options, options2: Options): boolean {
+  for (const property of ['length', 'oscillator', 'dynamicsCompressor'] as const) {
+    if (!shallowEqual(options1[property], options2[property])) {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * Helps getting 1 audio signal at a time.
+ */
+function makeRenderingQueue(onSignalReady: (signal: Float32Array | undefined) => unknown) {
+  let isRendering = false
+  let isStopped = false
+  let lastRequestedOptions: Options | undefined
+  let lastCompletedOptions: Options | undefined
+
+  const setOptions = async (options: Options) => {
+    lastRequestedOptions = options
+
+    if (isRendering || isStopped) {
+      return
+    }
+
+    try {
+      isRendering = true
+
+      while (!(lastCompletedOptions && areOptionsEqual(lastRequestedOptions, lastCompletedOptions))) {
+        // Save the options so that they are the same after completing the rendering
+        const currentOptions = lastRequestedOptions
+        let signal: Float32Array | undefined
+
+        try {
+          signal = await getAudioSignal(currentOptions)
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(error)
+        }
+
+        lastCompletedOptions = currentOptions
+        if (isStopped) {
+          break
+        } else {
+          onSignalReady(signal)
+        }
+      }
+    } finally {
+      isRendering = false
+    }
+  }
+
+  const stop = () => {
+    isStopped = true
+  }
+
+  return { setOptions, stop }
 }

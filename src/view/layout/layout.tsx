@@ -9,7 +9,7 @@ interface Props {
 /**
  * A full-screen layout for the demos
  */
-export default function Layout({ content, controls }: Props) {
+export default function Layout({ content, controls }: Props): React.ReactElement {
   return (
     <div className={styles.body}>
       <div className={styles.content}>{content}</div>

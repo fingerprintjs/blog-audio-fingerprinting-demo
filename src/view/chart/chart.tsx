@@ -1,20 +1,22 @@
 import * as React from 'react'
 import { chartMapBottom, chartMapCornerRadius, chartMapHeight, chartSidePadding } from '../style'
 import Controller from './controller'
-import { Line } from './types'
+import { LinesList } from './types'
 import * as style from './chart.css'
 
 interface Props {
-  lines: readonly Readonly<Line>[]
+  lines: LinesList
   /** The number to show under the first values on the chart */
   actualFirstIndex?: number
+  minSelectionLength?: number
+  maxSelectionLength?: number
   className?: string
 }
 
 /**
  * Draws a chart with lines.
  */
-function Chart({ lines, actualFirstIndex = 0, className = '' }: Props) {
+function Chart({ lines, actualFirstIndex, minSelectionLength, maxSelectionLength, className = '' }: Props) {
   const gestureContainerRef = React.useRef<HTMLDivElement>(null)
   const mainCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const mapCanvasRef = React.useRef<HTMLCanvasElement>(null)
@@ -22,17 +24,19 @@ function Chart({ lines, actualFirstIndex = 0, className = '' }: Props) {
 
   React.useEffect(() => {
     if (controllerRef.current) {
-      controllerRef.current.setLines(lines, actualFirstIndex)
+      controllerRef.current.setLines(lines, actualFirstIndex, minSelectionLength, maxSelectionLength)
     } else {
       controllerRef.current = new Controller(
-        gestureContainerRef.current!,
-        mainCanvasRef.current!,
-        mapCanvasRef.current!,
+        gestureContainerRef.current!, // eslint-disable-line @typescript-eslint/no-non-null-assertion
+        mainCanvasRef.current!, // eslint-disable-line @typescript-eslint/no-non-null-assertion
+        mapCanvasRef.current!, // eslint-disable-line @typescript-eslint/no-non-null-assertion
         lines,
         actualFirstIndex,
+        minSelectionLength,
+        maxSelectionLength,
       )
     }
-  }, [lines, actualFirstIndex])
+  }, [lines, actualFirstIndex, minSelectionLength, maxSelectionLength])
 
   React.useEffect(() => {
     return () => controllerRef.current?.destroy()

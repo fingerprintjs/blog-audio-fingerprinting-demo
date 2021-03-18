@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { numberColorToRGBA } from '../utils/color'
 import type { Signal } from '../example_signals'
-import { getAudioSignal } from '../utils/audio'
+import { useAudioSignal } from '../utils/audio'
 import LoadingScreen from './loading_screen/loading_screen'
 import Layout from './layout/layout'
 import ToggleButtonGroup from './toggle_button/toggle_button_group'
@@ -29,36 +29,25 @@ export default DifferenceDemo
  * Undefined means that the signal is being calculated.
  */
 function useCurrentBrowserSignal() {
-  const [signal, setSignal] = React.useState<Float32Array | null>()
+  const signal = useAudioSignal({
+    // Matches the example signals (actually they contain signal slices from 4000 to 5000)
+    length: 5000,
+    // Match the parameters at https://github.com/fingerprintjs/fingerprintjs/blob/3201a7d61b/src/sources/audio.ts
+    oscillator: {
+      type: 'triangle',
+      frequency: 10000,
+    },
+    dynamicsCompressor: {
+      threshold: -50,
+      knee: 40,
+      ratio: 12,
+      attack: 0,
+      release: 0.25,
+    },
+  })
 
-  React.useEffect(() => {
-    getAudioSignal({
-      // Matches the example signals (actually they contain signal slices from 4000 to 5000)
-      length: 5000,
-      // Match the parameters at https://github.com/fingerprintjs/fingerprintjs/blob/3201a7d61b/src/sources/audio.ts
-      oscillator: {
-        type: 'triangle',
-        frequency: 10000,
-      },
-      dynamicsCompressor: {
-        threshold: -50,
-        knee: 40,
-        ratio: 12,
-        attack: 0,
-        release: 0.25,
-      },
-    }).then(
-      // Trim the signal to match the example signals
-      (signal) => setSignal(signal?.subarray(4000) || null),
-      (error) => {
-        // eslint-disable-next-line no-console
-        console.error(error)
-        setSignal(null)
-      },
-    )
-  }, [])
-
-  return signal
+  // Trim the signal to match the example signals
+  return React.useMemo(() => signal && signal.subarray(4000), [signal])
 }
 
 function useExampleSignals() {
@@ -154,7 +143,7 @@ function LoadedDemo({ currentBrowserSignal, exampleSignals }: LoadedDemoProps) {
 
   return (
     <Layout
-      content={<Chart lines={chartLines} actualFirstIndex={4000} />}
+      content={<Chart lines={chartLines} actualFirstIndex={4000} minSelectionLength={10} maxSelectionLength={500} />}
       controls={<ToggleButtonGroup buttons={buttons} on={enabledSignals} onSwitch={setEnabledSignals} />}
     />
   )
