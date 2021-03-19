@@ -50,9 +50,9 @@ export const chartMapCornerRadius = 5
 export const chartMapLineWidth = 1
 export const chartMapLinesHorizontalMargin = 1
 export const chartMapLinesVerticalMargin = 4 / 3
-export const chartSelectorOutsideColor = 0xe2eef9
+export const chartSelectorOutsideColor = 0xe9e9f1
 export const chartSelectorOutsideOpacity = 0.6
-export const chartSelectorBorderColor = 0xc0d1e1
+export const chartSelectorBorderColor = 0xccccdb
 export const chartSelectorBorderCornerRadius = 6
 export const chartSelectorVerticalPadding = -1
 export const chartSelectorNotchColor = 0xffffff
@@ -65,7 +65,9 @@ export const chartScaleLineOpacity = 0.1
 export const chartScaleLineWidth = 1
 export const chartScaleLabelColor = 0x8e8e93
 export const chartScaleLabelFontSize = 11
-export const chartDateScaleLabelMargin = 8
+export const chartScaleLabelUnderlayOpacity = 0.6
+export const chartScaleLabelUnderlayPadding = 2
+export const chartIndexScaleLabelMargin = 8
 export const chartSelectorGripWidth = 10
 export const chartValueScaleLabelMargin = 4
 export const chartValueScaleMinSpaceForNotch = 70
@@ -74,8 +76,7 @@ export const chartLinePointerRadius = 4
 
 export const chartDetailsPopupXMargin = 22
 export const chartDetailsPopupMinDistanceToEdge = 5
-export const chartDetailsPopupY = 53
-export const chartDetailsPopupWidth = 300
+export const chartDetailsPopupY = 24
 export const chartDetailsPopupSidePadding = 12
 export const chartDetailsPopupCornerRadius = 10
 export const chartDetailsPopupHeaderFontPrefix = 'Sample #'
@@ -99,14 +100,14 @@ export const chartDetailsPopupMissingValueText = '-'
 export const palette = [
   0x699ace,
   0xdf8244,
-  0xa5a5a5,
   0xf6c143,
-  0x4d74bf,
   0x7ea954,
+  0x4d74bf,
   0x335e8d,
   0x944c20,
   0x636365,
   0x947424,
   0x2a4287,
   0x4b6633,
+  0xa5a5a5,
 ]

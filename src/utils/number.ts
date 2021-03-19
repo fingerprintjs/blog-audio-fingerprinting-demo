@@ -53,8 +53,13 @@ function getNumberSuffixPower(number: number): number {
   return shortNumberSuffixes.length
 }
 
-export function formatNumberWithThousandGroups(number: number, divider = ' '): string {
-  const [integer, fractional] = String(number).split('.')
+export function formatNumberWithThousandGroups(
+  number: number,
+  fractionalPrecision?: number | null,
+  divider = ' ',
+): string {
+  const numberString = typeof fractionalPrecision === 'number' ? number.toFixed(fractionalPrecision) : String(number)
+  const [integer, fractional] = numberString.split('.')
   const digitsCount = integer.length
   let groupedInteger = ''
 

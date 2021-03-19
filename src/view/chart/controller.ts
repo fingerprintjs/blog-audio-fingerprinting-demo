@@ -1,4 +1,4 @@
-import { easeCubicOut } from 'd3-ease'
+import { easeQuadInOut } from 'd3-ease'
 import memoizeOne from 'memoize-one'
 import { fitRangeInRangeWhileKeepingLength, getArrayMinAndMax, getMinAndMaxOnRange } from '../../utils/data'
 import {
@@ -19,6 +19,15 @@ import { LinesList } from './types'
 type LinesMinAndMax = readonly Readonly<{ min: number; max: number }>[]
 type AnimatedWriteState = Parameters<ReturnType<typeof createAnimatedState>['moveTo']>[0]
 
+interface Options {
+  /** In pixels */
+  detailsPopupWidth: number
+  /** The number of digits after the fractional dot */
+  detailsPopupValuePrecision: number | null
+  minTopValue: number
+  maxBottomValue: number
+}
+
 /**
  * Manages the chart state, including the animations.
  *
@@ -36,6 +45,12 @@ export default class Controller {
   private indexNameOffset = 0
   private minIndexRange = 10
   private maxIndexRange = 500
+  private options: Options = {
+    detailsPopupWidth: 200,
+    detailsPopupValuePrecision: null,
+    minTopValue: -Infinity,
+    maxBottomValue: Infinity,
+  }
 
   // User input state:
   private startIndex = 0 // Start of the selected map area
@@ -67,12 +82,15 @@ export default class Controller {
     private mapCanvas: HTMLCanvasElement,
     lines: LinesList,
     /** What's the real index of the first line values */
-    indexNameOffset?: number,
-    minIndexRange?: number,
-    maxIndexRange?: number,
+    indexNameOffset: number,
+    minIndexRange: number,
+    maxIndexRange: number,
+    initialIndexRange: number,
+    options: Partial<Options> = {},
   ) {
     this.setDomState()
-    this.setLinesState(lines, indexNameOffset, minIndexRange, maxIndexRange, true)
+    this.setLinesState(lines, indexNameOffset, minIndexRange, maxIndexRange, initialIndexRange)
+    this.options = { ...this.options, ...options }
     this.animatedState = createAnimatedState(lines.length, this.render.bind(this))
     this.animatedState.moveTo(this.getAnimatedStateTarget(), true)
     this.gesturesWatcher = watchGestures(gestureContainer, this.getStateForGestureWatcher(), {
@@ -88,8 +106,13 @@ export default class Controller {
     this.render()
   }
 
-  public setLines(lines: LinesList, indexNameOffset?: number, minIndexRange?: number, maxIndexRange?: number): void {
-    this.setLinesState(lines, indexNameOffset, minIndexRange, maxIndexRange, false)
+  public setLines(lines: LinesList, indexNameOffset: number, minIndexRange: number, maxIndexRange: number): void {
+    this.setLinesState(lines, indexNameOffset, minIndexRange, maxIndexRange)
+    this.handleStateChange()
+  }
+
+  public setOptions(options: Partial<Options>): void {
+    this.options = { ...this.options, ...options }
     this.handleStateChange()
   }
 
@@ -104,30 +127,35 @@ export default class Controller {
 
   private setLinesState(
     lines: LinesList,
-    indexNameOffset: number | undefined,
-    minIndexRange: number | undefined,
-    maxIndexRange: number | undefined,
-    isInitial: boolean,
+    indexNameOffset: number,
+    minIndexRangeLength: number,
+    maxIndexRangeLength: number,
+    indexRangeLength?: number,
   ) {
-    if (!isInitial && this.lines.length !== lines.length) {
+    if (this.animatedState && this.lines.length !== lines.length) {
       throw new Error('Changing the number of lines is not implemented')
     }
 
     this.lines = lines
-    this.indexNameOffset = indexNameOffset ?? this.indexNameOffset
-    this.minIndexRange = minIndexRange ?? this.minIndexRange
-    this.maxIndexRange = maxIndexRange ?? this.maxIndexRange
+    this.indexNameOffset = indexNameOffset
+    this.minIndexRange = minIndexRangeLength
+    this.maxIndexRange = maxIndexRangeLength
 
     // Adjust the selected map range for the new lines
     const indexRange = this.getIndexRange(lines)
-    const { start, end } = isInitial
-      ? getInitialIndexRange(indexRange.min, indexRange.max, this.minIndexRange, this.maxIndexRange)
-      : fitRangeInRangeWhileKeepingLength(
-          indexRange.min,
-          indexRange.max,
-          this.startIndex,
-          inRange(this.startIndex + this.minIndexRange, this.endIndex, this.startIndex + this.maxIndexRange),
-        )
+    const { start, end } =
+      indexRangeLength !== undefined
+        ? getInitialIndexRange(
+            indexRange.min,
+            indexRange.max,
+            inRange(minIndexRangeLength, indexRangeLength, maxIndexRangeLength),
+          )
+        : fitRangeInRangeWhileKeepingLength(
+            indexRange.min,
+            indexRange.max,
+            this.startIndex,
+            inRange(this.startIndex + this.minIndexRange, this.endIndex, this.startIndex + this.maxIndexRange),
+          )
     this.startIndex = start
     this.endIndex = end
   }
@@ -212,7 +240,12 @@ export default class Controller {
       detailsPosition: [detailsPosition, detailsPosition ? 1 : 0],
     }
 
-    const mapValueRange = this.getMapValueRange(this.lines, this.getLinesMinAndMax(this.lines))
+    const mapValueRange = this.getMapValueRange(
+      this.lines,
+      this.options.maxBottomValue,
+      this.options.minTopValue,
+      this.getLinesMinAndMax(this.lines),
+    )
     if (mapValueRange) {
       target.mapValueMiddle = mapValueRange.middle
 
@@ -222,7 +255,13 @@ export default class Controller {
       }
     }
 
-    const mainValueRange = this.getMainValueRange(this.lines, this.startIndex, this.endIndex)
+    const mainValueRange = this.getMainValueRange(
+      this.lines,
+      this.startIndex,
+      this.endIndex,
+      this.options.maxBottomValue,
+      this.options.minTopValue,
+    )
     if (mainValueRange) {
       target.mainValueMiddle = mainValueRange.middle
 
@@ -276,6 +315,8 @@ export default class Controller {
         detailsIndex,
         detailsAlign,
         detailsOpacity,
+        detailsPopupWidth: this.options.detailsPopupWidth,
+        detailsPopupValuePrecision: this.options.detailsPopupValuePrecision,
       },
       Object.values(lineOpacities),
       Object.values(detailsLineOpacities),
@@ -316,16 +357,10 @@ function makeGetLinesMinAndMax() {
   }
 }
 
-function getInitialIndexRange(
-  minIndex: number,
-  maxIndex: number,
-  minLength: number,
-  maxLength: number,
-): { start: number; end: number } {
-  const length = inRange(minLength, (maxIndex - minIndex) * 0.27, maxLength)
+function getInitialIndexRange(minIndex: number, maxIndex: number, length: number): { start: number; end: number } {
   return {
-    start: maxIndex - length,
-    end: maxIndex,
+    start: minIndex,
+    end: Math.min(minIndex + length, maxIndex),
   }
 }
 
@@ -337,9 +372,9 @@ function getLineOpacities(lines: LinesList) {
   return opacities
 }
 
-function getMapValueRange(lines: LinesList, linesMinAndMaxCache: LinesMinAndMax) {
-  let min = Infinity
-  let max = -Infinity
+function getMapValueRange(lines: LinesList, maxBottom: number, minTop: number, linesMinAndMaxCache: LinesMinAndMax) {
+  let min = maxBottom
+  let max = minTop
 
   for (let key = 0; key < lines.length; ++key) {
     if (lines[key].draw) {
@@ -362,9 +397,9 @@ function getMapValueRange(lines: LinesList, linesMinAndMaxCache: LinesMinAndMax)
   return undefined
 }
 
-function getMainValueRange(lines: LinesList, startIndex: number, endIndex: number) {
-  let totalMin = Infinity
-  let totalMax = -Infinity
+function getMainValueRange(lines: LinesList, startIndex: number, endIndex: number, maxBottom: number, minTop: number) {
+  let totalMin = maxBottom
+  let totalMax = minTop
 
   for (let key = 0; key < lines.length; ++key) {
     if (lines[key].draw) {
@@ -423,8 +458,8 @@ function createAnimatedState(linesCount: number, render: () => void) {
   const lineOpacitiesTransitions: Record<number, Animation<number>> = {}
   const detailsLineOpacitiesTransitions: Record<number, Animation<number>> = {}
   for (let key = 0; key < linesCount; ++key) {
-    lineOpacitiesTransitions[key] = makeTransition(1)
-    detailsLineOpacitiesTransitions[key] = makeTransition(1)
+    lineOpacitiesTransitions[key] = makeTransition(1, { easing: easeQuadInOut })
+    detailsLineOpacitiesTransitions[key] = makeTransition(1, { easing: easeQuadInOut })
   }
 
   const defaultValueMiddle = 0
@@ -435,23 +470,22 @@ function createAnimatedState(linesCount: number, render: () => void) {
     chartValueScaleMaxNotchCount,
   )
 
-  // In-easings aren't used for scales because in-easings stuck at start when new values come frequently
   return makeAnimationGroup(
     {
       lineOpacities: makeTransitionGroup(lineOpacitiesTransitions),
       mapValueMiddle: makeTransition(defaultValueMiddle),
       mapValueSize: makeExponentialTransition(defaultValueSize),
       mainValueMiddle: makeTransition((defaultMainYRange.min + defaultMainYRange.max) / 2),
-      mainValueSize: makeExponentialTransition(defaultMainYRange.max - defaultMainYRange.min, { easing: easeCubicOut }),
-      mainValueNotchScale: makeTransition(defaultMainYRange.notchScale, { easing: easeCubicOut }),
-      indexNotchScale: makeTransition(0, { easing: easeCubicOut }),
+      mainValueSize: makeExponentialTransition(defaultMainYRange.max - defaultMainYRange.min),
+      mainValueNotchScale: makeTransition(defaultMainYRange.notchScale),
+      indexNotchScale: makeTransition(0),
       detailsPosition: makeInstantWhenHiddenTransition(
         makeTransitionGroup({
-          index: makeTransition(0, { easing: easeCubicOut, duration: 300 }),
-          align: makeTransition(0),
+          index: makeTransition(0, { duration: 300 }),
+          align: makeTransition(0, { easing: easeQuadInOut }),
           lineOpacities: makeTransitionGroup(detailsLineOpacitiesTransitions),
         }),
-        makeTransition(0, { duration: 300 }),
+        makeTransition(0, { easing: easeQuadInOut, duration: 300 }),
       ),
     },
     render,

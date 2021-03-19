@@ -24,15 +24,17 @@ const DifferenceDemo = React.memo(function DifferenceDemo() {
 
 export default DifferenceDemo
 
+const signalOffset = 4500
+
 /**
  * Null means that the signal is impossible to get.
  * Undefined means that the signal is being calculated.
  */
 function useCurrentBrowserSignal() {
   const signal = useAudioSignal({
-    // Matches the example signals (actually they contain signal slices from 4000 to 5000)
+    // Matches the example signals (actually they contain signal slices from 4500 to 5000)
     length: 5000,
-    // Match the parameters at https://github.com/fingerprintjs/fingerprintjs/blob/3201a7d61b/src/sources/audio.ts
+    // Match the parameters at https://github.com/fingerprintjs/fingerprintjs/blob/9760b06109/src/sources/audio.ts
     oscillator: {
       type: 'triangle',
       frequency: 10000,
@@ -47,7 +49,7 @@ function useCurrentBrowserSignal() {
   })
 
   // Trim the signal to match the example signals
-  return React.useMemo(() => signal && signal.subarray(4000), [signal])
+  return React.useMemo(() => signal && signal.subarray(signalOffset), [signal])
 }
 
 function useExampleSignals() {
@@ -82,7 +84,7 @@ function LoadedDemo({ currentBrowserSignal, exampleSignals }: LoadedDemoProps) {
     if (currentBrowserSignal) {
       signals.unshift({
         key: currentSignalKey,
-        title: 'This browser',
+        title: 'Your browser',
         color: 0,
         values: currentBrowserSignal,
       })
@@ -95,40 +97,14 @@ function LoadedDemo({ currentBrowserSignal, exampleSignals }: LoadedDemoProps) {
     return signals
   }, [currentBrowserSignal, exampleSignals])
 
-  const chartLines = React.useMemo(() => {
-    // Lines of the same browsers look the same, therefore they can be skipped to improve the performance
-    let isChromeEnabled = false
-    let isSafariEnabled = false
-    let isFirefoxEnabled = false
-
-    return allSignals.map(({ key, title, ...signal }) => {
-      const enabled = enabledSignals.includes(key)
-      let draw = enabled
-      if (draw) {
-        if (key.includes('chrome')) {
-          if (isChromeEnabled) {
-            draw = false
-          } else {
-            isChromeEnabled = true
-          }
-        } else if (key.includes('safari')) {
-          if (isSafariEnabled) {
-            draw = false
-          } else {
-            isSafariEnabled = true
-          }
-        } else if (key.includes('firefox')) {
-          if (isFirefoxEnabled) {
-            draw = false
-          } else {
-            isFirefoxEnabled = true
-          }
-        }
-      }
-
-      return { ...signal, name: title, draw, showInPopup: enabled }
-    })
-  }, [allSignals, enabledSignals])
+  const chartLines = React.useMemo(
+    () =>
+      allSignals.map(({ key, title, ...signal }) => {
+        const enabled = enabledSignals.includes(key)
+        return { ...signal, name: title, draw: enabled, showInPopup: enabled }
+      }),
+    [allSignals, enabledSignals],
+  )
 
   const buttons = React.useMemo(
     () =>
@@ -143,7 +119,16 @@ function LoadedDemo({ currentBrowserSignal, exampleSignals }: LoadedDemoProps) {
 
   return (
     <Layout
-      content={<Chart lines={chartLines} actualFirstIndex={4000} minSelectionLength={10} maxSelectionLength={500} />}
+      content={
+        <Chart
+          lines={chartLines}
+          actualFirstIndex={signalOffset}
+          minSelectionLength={10}
+          maxSelectionLength={500}
+          initialSelectionLength={53}
+          detailsPopupWidth={300}
+        />
+      }
       controls={<ToggleButtonGroup buttons={buttons} on={enabledSignals} onSwitch={setEnabledSignals} />}
     />
   )

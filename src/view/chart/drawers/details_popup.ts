@@ -1,10 +1,10 @@
 import { numberColorToRGBA } from '../../../utils/color'
 import { roundedRectanglePath } from '../../../utils/canvas'
 import { formatNumberWithThousandGroups } from '../../../utils/number'
+import { interpolateLinear } from '../../../utils/data'
 import {
   getFontFamily,
   getTextColor,
-  chartDetailsPopupWidth,
   chartDetailsPopupSidePadding,
   chartDetailsPopupCornerRadius,
   chartDetailsPopupHeaderFontSize,
@@ -37,7 +37,9 @@ interface Options {
   opacity: number
   x: number
   y: number
-  getIndexLabel: (index: number) => string
+  width: number
+  indexNameOffset: number
+  valuePrecision: number | null
 }
 
 /**
@@ -56,13 +58,15 @@ export default function drawDetailsPopup({
   opacity,
   x,
   y,
-  getIndexLabel,
+  width: cssWidth,
+  indexNameOffset,
+  valuePrecision,
 }: Options): void {
   if (opacity === 0) {
     return
   }
 
-  const width = chartDetailsPopupWidth * pixelRatio
+  const width = cssWidth * pixelRatio
   const height =
     (chartDetailsPopupFirstRowBaselineY +
       (getLineRowsAmount(linesData, lineOpacities) - 1) * chartDetailsPopupRowHeight +
@@ -82,7 +86,7 @@ export default function drawDetailsPopup({
     opacity,
     x + sidePadding,
     y + chartDetailsPopupHeaderBaselineY * pixelRatio,
-    getIndexLabel,
+    indexNameOffset,
   )
 
   let rowY = y + chartDetailsPopupFirstRowBaselineY * pixelRatio
@@ -99,6 +103,7 @@ export default function drawDetailsPopup({
         width - sidePadding * 2,
         textColor,
         fontFamily,
+        valuePrecision,
         opacity * rowOpacity,
         pixelRatio,
       )
@@ -155,7 +160,7 @@ function drawHeader(
   opacity: number,
   x: number,
   y: number,
-  getIndexLabel: (index: number) => string,
+  indexNameOffset: number,
 ) {
   const fontSize = chartDetailsPopupHeaderFontSize * pixelRatio
   const baseline = 'alphabetic'
@@ -184,7 +189,7 @@ function drawHeader(
     color: textColor,
     opacity,
     position: index,
-    getItemText: getIndexLabel,
+    getItemText: (index) => formatNumberWithThousandGroups(index + indexNameOffset),
   })
 }
 
@@ -197,13 +202,14 @@ function drawRow(
   width: number,
   textColor: number,
   fontFamily: string,
+  valuePrecision: number | null,
   opacity: number,
   pixelRatio: number,
 ) {
   const fontSize = chartDetailsPopupFontSize * pixelRatio
-  const baseline = 'alphabetic'
+  const transitionalValue = interpolateLinear(values, index)
 
-  ctx.textBaseline = baseline
+  ctx.textBaseline = 'alphabetic'
   ctx.textAlign = 'left'
   ctx.font = `${
     chartDetailsPopupFontWeight === 'regular' ? '' : chartDetailsPopupFontWeight
@@ -211,25 +217,18 @@ function drawRow(
   ctx.fillStyle = numberColorToRGBA(textColor, opacity)
   ctx.fillText(name, x, y)
 
-  drawRotatingDisplay({
-    ctx,
-    x: x + width,
+  ctx.textAlign = 'right'
+  ctx.font = `${
+    chartDetailsPopupValueFontWeight === 'regular' ? '' : chartDetailsPopupValueFontWeight
+  } ${fontSize}px ${fontFamily}`
+  ctx.fillStyle = numberColorToRGBA(color, opacity)
+  ctx.fillText(
+    transitionalValue === undefined
+      ? chartDetailsPopupMissingValueText
+      : formatNumberWithThousandGroups(transitionalValue, valuePrecision),
+    x + width,
     y,
-    position: index,
-    containerAlign: 'right',
-    baseline,
-    fontSize,
-    fontWeight: chartDetailsPopupValueFontWeight,
-    fontFamily,
-    opacity,
-    getItemText: (index) =>
-      index >= 0 && index < values.length
-        ? formatNumberWithThousandGroups(values[index])
-        : chartDetailsPopupMissingValueText,
-    topAlign: 1,
-    bottomAlign: 0.8,
-    color,
-  })
+  )
 }
 
 function getLineRowsAmount(linesData: LinesList, lineOpacities: readonly number[]) {

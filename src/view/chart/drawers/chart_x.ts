@@ -1,5 +1,5 @@
 import memoizeObjectArguments from '../../../utils/memoize_object_arguments'
-import { chartSidePadding, chartDateScaleLabelMargin, chartMapHeight, chartMapBottom } from '../../style'
+import { chartSidePadding, chartIndexScaleLabelMargin, chartMapHeight, chartMapBottom } from '../../style'
 import drawIndexScale from './index_scale'
 import drawMapSelector from './map_selector'
 import makeFade from './fade'
@@ -15,7 +15,7 @@ interface Options {
   startIndex: number
   endIndex: number
   indexNotchScale: number
-  getIndexLabel: (index: number) => string
+  indexNameOffset: number
   _: unknown
 }
 
@@ -24,13 +24,25 @@ export default function makeChartX(ctx: CanvasRenderingContext2D): (options: Opt
   const drawRightFade = makeFade(ctx, 'right')
 
   return memoizeObjectArguments(
-    ({ x, y, width, height, pixelRatio, minIndex, maxIndex, startIndex, endIndex, indexNotchScale, getIndexLabel }) => {
+    ({
+      x,
+      y,
+      width,
+      height,
+      pixelRatio,
+      minIndex,
+      maxIndex,
+      startIndex,
+      endIndex,
+      indexNotchScale,
+      indexNameOffset,
+    }) => {
       ctx.clearRect(x, y, width, height)
 
       drawIndexScale({
         ctx,
         x: x,
-        y: y + chartDateScaleLabelMargin * pixelRatio,
+        y: y + chartIndexScaleLabelMargin * pixelRatio,
         width: width,
         fromX: x + chartSidePadding * pixelRatio,
         toX: x + width - chartSidePadding * pixelRatio,
@@ -38,7 +50,7 @@ export default function makeChartX(ctx: CanvasRenderingContext2D): (options: Opt
         toIndex: endIndex,
         notchScale: indexNotchScale,
         pixelRatio,
-        getIndexLabel,
+        indexNameOffset,
       })
 
       drawLeftFade(x, y, chartSidePadding * pixelRatio, height)

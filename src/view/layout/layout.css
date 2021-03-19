@@ -17,5 +17,5 @@
 
 .controls {
   flex: none;
-  margin: 16px 12px 0 12px;
+  margin: 16px 12px 12px 12px; /* The bottom margin is for shadows */
 }

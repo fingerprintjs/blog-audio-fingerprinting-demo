@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { easeQuadInOut } from 'd3-ease'
+import { easeCubicOut } from 'd3-ease'
 
 /**
  * A passive animation for an animation group
@@ -98,7 +98,7 @@ interface TransitionOptions {
  */
 export function makeTransition(
   initialValue = 0,
-  { duration = 400, easing = easeQuadInOut, maxDistance = Infinity }: TransitionOptions = {},
+  { duration = 400, easing = easeCubicOut, maxDistance = Infinity }: TransitionOptions = {},
 ): Animation<number> {
   let startValue = initialValue
   let startTime = Date.now()

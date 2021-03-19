@@ -15,17 +15,17 @@ interface Props {
 }
 
 const SignalOptionsDemo = React.memo(function SignalOptionsDemo({ useDynamicsCompressor }: Props) {
-  const signalOffset = useDynamicsCompressor ? 200 : 0
+  const signalOffset = useDynamicsCompressor ? 250 : 0
   const [formData, setFormData] = React.useState<FormData>({
     oscillator: {
-      type: 'triangle',
-      frequency: 100,
+      type: useDynamicsCompressor ? 'square' : 'sine',
+      frequency: 170,
     },
     dynamicsCompressor: {
       threshold: -50,
       knee: 40,
       ratio: 12,
-      attack: 0,
+      attack: 0.012,
       release: 0.25,
     },
   })
@@ -55,7 +55,17 @@ const SignalOptionsDemo = React.memo(function SignalOptionsDemo({ useDynamicsCom
   return (
     <Layout
       content={
-        <Chart lines={chartLines} actualFirstIndex={signalOffset} minSelectionLength={50} maxSelectionLength={2500} />
+        <Chart
+          lines={chartLines}
+          actualFirstIndex={signalOffset}
+          minSelectionLength={50}
+          maxSelectionLength={2500}
+          initialSelectionLength={660}
+          maxBottomValue={-1}
+          minTopValue={1}
+          detailsPopupWidth={180}
+          detailsPopupValuePrecision={5}
+        />
       }
       controls={<OptionsForm showDynamicsCompressor={useDynamicsCompressor} data={formData} onChange={setFormData} />}
     />
@@ -82,7 +92,7 @@ const OptionsForm = React.memo(function OptionsForm({ showDynamicsCompressor, da
       <Form
         fields={[
           {
-            label: 'Type',
+            label: 'Type:',
             input: (
               <Select
                 options={oscillatorTypeOptions}
@@ -92,7 +102,7 @@ const OptionsForm = React.memo(function OptionsForm({ showDynamicsCompressor, da
             ),
           },
           {
-            label: 'Frequency',
+            label: 'Frequency:',
             value: `${data.oscillator.frequency}Hz`,
             input: (
               <Range
@@ -112,7 +122,7 @@ const OptionsForm = React.memo(function OptionsForm({ showDynamicsCompressor, da
         <Form
           fields={[
             {
-              label: 'Threshold',
+              label: 'Threshold:',
               value: `${data.dynamicsCompressor.threshold}dB`,
               input: (
                 <Range
@@ -127,7 +137,7 @@ const OptionsForm = React.memo(function OptionsForm({ showDynamicsCompressor, da
               ),
             },
             {
-              label: 'Knee',
+              label: 'Knee:',
               value: `${data.dynamicsCompressor.knee}dB`,
               input: (
                 <Range
@@ -140,7 +150,7 @@ const OptionsForm = React.memo(function OptionsForm({ showDynamicsCompressor, da
               ),
             },
             {
-              label: 'Ratio',
+              label: 'Ratio:',
               value: String(data.dynamicsCompressor.ratio),
               input: (
                 <Range
@@ -154,7 +164,7 @@ const OptionsForm = React.memo(function OptionsForm({ showDynamicsCompressor, da
               ),
             },
             {
-              label: 'Attack',
+              label: 'Attack:',
               value: `${data.dynamicsCompressor.attack}s`,
               input: (
                 <Range
@@ -173,7 +183,7 @@ const OptionsForm = React.memo(function OptionsForm({ showDynamicsCompressor, da
               ),
             },
             {
-              label: 'Release',
+              label: 'Release:',
               value: `${data.dynamicsCompressor.release}s`,
               input: (
                 <Range

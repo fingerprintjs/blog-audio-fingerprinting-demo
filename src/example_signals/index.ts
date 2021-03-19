@@ -1,10 +1,7 @@
-import chromeAndroid from './chrome_android'
-import chromeMacos from './chrome_macos'
-import chromeWindows from './chrome_windows'
-import firefoxWindows from './firefox_windows'
-import safariIos from './safari_ios'
-import safariMacos from './safari_macos'
+import chrome from './chrome'
+import firefox from './firefox'
+import safari from './safari'
 
 export { Signal } from './types'
 
-export default { chromeWindows, chromeAndroid, chromeMacos, firefoxWindows, safariIos, safariMacos }
+export default { chrome, firefox, safari }

@@ -1,5 +1,4 @@
 import memoizeOne from 'memoize-one'
-import { formatNumberWithThousandGroups } from '../../../utils/number'
 import {
   chartMainLinesBottomMargin,
   chartMapHeight,
@@ -8,7 +7,6 @@ import {
   chartSidePadding,
   chartDetailsPopupY,
   chartDetailsPopupXMargin,
-  chartDetailsPopupWidth,
   chartDetailsPopupMinDistanceToEdge,
 } from '../../style'
 import { LinesList } from '../types'
@@ -39,6 +37,8 @@ interface Options {
   /** 0 - to the left of the pointer, 1 - to the right */
   detailsAlign: number
   detailsOpacity: number
+  detailsPopupWidth: number
+  detailsPopupValuePrecision: number | null
 }
 
 export default function makeChart(
@@ -61,11 +61,6 @@ export default function makeChart(
   const updateMapCanvasSize = memoizeOne((width, height) => {
     mapCanvas.width = width
     mapCanvas.height = height
-  })
-
-  // The goal is to keep the save reference when possible to leverage the shallow memoization
-  const makeGetIndexLabel = memoizeOne((indexNameOffset: number) => {
-    return (index: number) => formatNumberWithThousandGroups(index + indexNameOffset)
   })
 
   // The parts of the chart that can be updated independently
@@ -98,6 +93,8 @@ export default function makeChart(
       detailsIndex,
       detailsAlign,
       detailsOpacity,
+      detailsPopupWidth,
+      detailsPopupValuePrecision,
     },
     lineOpacities,
     detailsLineOpacities,
@@ -106,7 +103,6 @@ export default function makeChart(
     const mainSectionHeight =
       mainCanvasHeight - (chartMainLinesBottomMargin + chartMapHeight + chartMapBottom) * pixelRatio - mainSectionY
     const doDrawDetailsPopup = detailsOpacity > 0 && detailsIndex !== null
-    const getIndexLabel = makeGetIndexLabel(indexNameOffset)
 
     updateMainCanvasSize(mainCanvasWidth, mainCanvasHeight)
     updateMapCanvasSize(mapCanvasWidth, mapCanvasHeight)
@@ -151,21 +147,34 @@ export default function makeChart(
       endIndex,
       indexNotchScale,
       pixelRatio,
-      getIndexLabel,
+      indexNameOffset,
       _: forceRedrawMainCanvas,
     })
 
     if (doDrawDetailsPopup) {
+      const x = Math.round(
+        getDetailsPopupX(
+          mainCanvasWidth,
+          detailsPopupWidth,
+          pixelRatio,
+          detailsIndex,
+          startIndex,
+          endIndex,
+          detailsAlign,
+        ),
+      )
       drawDetailsPopup({
-        linesData,
-        x: Math.round(getDetailsPopupX(mainCanvasWidth, pixelRatio, detailsIndex, startIndex, endIndex, detailsAlign)),
-        y: chartDetailsPopupY * pixelRatio,
         ctx: mainCtx,
+        linesData,
+        x,
+        y: chartDetailsPopupY * pixelRatio,
+        width: detailsPopupWidth,
         pixelRatio,
         lineOpacities: detailsLineOpacities,
         index: detailsIndex,
         opacity: detailsOpacity,
-        getIndexLabel,
+        indexNameOffset,
+        valuePrecision: detailsPopupValuePrecision,
       })
     }
 
@@ -187,6 +196,7 @@ export default function makeChart(
 
 function getDetailsPopupX(
   canvasWidth: number,
+  popupCssWidth: number,
   pixelRatio: number,
   detailsIndex: number,
   startIndex: number,
@@ -199,10 +209,10 @@ function getDetailsPopupX(
 
   const xOnLeftAlign = Math.max(
     chartDetailsPopupMinDistanceToEdge * pixelRatio,
-    pointerX - (chartDetailsPopupWidth + chartDetailsPopupXMargin) * pixelRatio,
+    pointerX - (popupCssWidth + chartDetailsPopupXMargin) * pixelRatio,
   )
   const xOnRightAlign = Math.min(
-    canvasWidth - (chartDetailsPopupMinDistanceToEdge + chartDetailsPopupWidth) * pixelRatio,
+    canvasWidth - (chartDetailsPopupMinDistanceToEdge + popupCssWidth) * pixelRatio,
     pointerX + chartDetailsPopupXMargin * pixelRatio,
   )
 

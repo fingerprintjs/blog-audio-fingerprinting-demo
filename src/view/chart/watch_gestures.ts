@@ -12,6 +12,7 @@ import { isInRectangle } from '../../utils/geometry'
 const mapGripOutsideOffset = 30
 const mapGripInsideOffset = 0
 const mapGripVerticalOffset = 10
+const mapLinesSideOffset = 10
 
 export interface ChartGestureState {
   // In absolute units (from 0 to 1)
@@ -84,7 +85,7 @@ export default function watchGestures(
   }
 
   function handleMouseDown(event: MouseEvent) {
-    event.preventDefault()
+    // Don't call `event.preventDefault()` here: https://stackoverflow.com/q/66703382/1118709
     const { x, y } = getEventRelativeCoordinates(event)
 
     if (isInMapSelectionStart(x, y)) {
@@ -100,22 +101,17 @@ export default function watchGestures(
     for (let i = 0; i < event.changedTouches.length; ++i) {
       const touch = event.changedTouches[i]
       const { x, y } = getEventRelativeCoordinates(touch)
+      const createWatcher: WatcherCreator = (args) => {
+        event.preventDefault()
+        return watchTouchDrag({ startTouch: touch, ...args })
+      }
 
       if (isInMapSelectionStart(x, y)) {
-        handleMapStartDrag(x, ({ onMove, onEnd }) => {
-          event.preventDefault()
-          return watchTouchDrag({ startTouch: touch, onMove, onEnd })
-        })
+        handleMapStartDrag(x, createWatcher)
       } else if (isInMapSelectionEnd(x, y)) {
-        handleMapEndDrag(x, ({ onMove, onEnd }) => {
-          event.preventDefault()
-          return watchTouchDrag({ startTouch: touch, onMove, onEnd })
-        })
+        handleMapEndDrag(x, createWatcher)
       } else if (isInMapSelectionMiddle(x, y)) {
-        handleMapMiddleDrag(x, ({ onMove, onEnd }) => {
-          event.preventDefault()
-          return watchTouchDrag({ startTouch: touch, onMove, onEnd })
-        })
+        handleMapMiddleDrag(x, createWatcher)
       }
     }
   }
@@ -240,7 +236,7 @@ export default function watchGestures(
   function isInMapLines(targetX: number, targetY: number) {
     const { x, y, width, height } = getMainLinesBounds()
 
-    return isInRectangle(targetX, targetY, x, y, width, height)
+    return isInRectangle(targetX, targetY, x - mapLinesSideOffset, y, width + mapLinesSideOffset * 2, height)
   }
 
   function getEventRelativeCoordinates(event: MouseEvent | Touch) {

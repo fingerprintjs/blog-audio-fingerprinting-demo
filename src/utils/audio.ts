@@ -28,7 +28,7 @@ export interface Options {
  * Renders an audio signal.
  * Undefined is returned when the signal can't be rendered and there is no error.
  *
- * Based on https://github.com/fingerprintjs/fingerprintjs/blob/3201a7d61bb4df2816c226d8364cc98bb4235e59/src/sources/audio.ts
+ * Based on https://github.com/fingerprintjs/fingerprintjs/blob/9760b06109/src/sources/audio.ts
  */
 export async function getAudioSignal(options: Options): Promise<Float32Array | undefined> {
   const w = window
@@ -49,13 +49,13 @@ export async function getAudioSignal(options: Options): Promise<Float32Array | u
   const oscillator = context.createOscillator()
   nodes.push(oscillator)
   oscillator.type = options.oscillator.type
-  setAudioParam(context, oscillator.frequency, options.oscillator.frequency)
+  oscillator.frequency.value = options.oscillator.frequency
 
   if (options.dynamicsCompressor) {
     const compressor = context.createDynamicsCompressor()
     nodes.push(compressor)
     for (const trait of ['threshold', 'knee', 'ratio', 'attack', 'release'] as const) {
-      setAudioParam(context, compressor[trait], options.dynamicsCompressor[trait])
+      compressor[trait].value = options.dynamicsCompressor[trait]
     }
   }
 
@@ -65,14 +65,8 @@ export async function getAudioSignal(options: Options): Promise<Float32Array | u
   }
   oscillator.start(0)
 
-  try {
-    const buffer = await renderAudio(context)
-    return buffer.getChannelData(0)
-  } finally {
-    for (const node of nodes) {
-      node.disconnect()
-    }
-  }
+  const buffer = await renderAudio(context)
+  return buffer.getChannelData(0)
 }
 
 /**
@@ -80,15 +74,6 @@ export async function getAudioSignal(options: Options): Promise<Float32Array | u
  */
 function doesCurrentBrowserSuspendAudioContext() {
   return isWebKit() && !isDesktopSafari() && !isWebKit606OrNewer()
-}
-
-function setAudioParam(context: BaseAudioContext, param: unknown, value: number) {
-  const isAudioParam = (value: unknown): value is AudioParam =>
-    !!value && typeof (value as AudioParam).setValueAtTime === 'function'
-
-  if (isAudioParam(param)) {
-    param.setValueAtTime(value, context.currentTime)
-  }
 }
 
 function renderAudio(context: OfflineAudioContext) {

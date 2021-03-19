@@ -3,12 +3,15 @@ import { numberColorToRGBA } from '../../../utils/color'
 import { listSubDecimalNotchesForRange } from '../../../utils/scale'
 import {
   getFontFamily,
+  getBackgroundColor,
   chartScaleLineColor,
   chartScaleLineOpacity,
   chartScaleLineWidth,
   chartScaleLabelColor,
   chartScaleLabelFontSize,
   chartValueScaleLabelMargin,
+  chartScaleLabelUnderlayOpacity,
+  chartScaleLabelUnderlayPadding,
 } from '../../style'
 
 interface Options {
@@ -55,9 +58,12 @@ export default function drawValueScale({
 
   const lineWidth = chartScaleLineWidth * pixelRatio
   const fontSize = Math.round(chartScaleLabelFontSize * pixelRatio)
+  const backgroundColor = getBackgroundColor()
   const labelOffset = chartValueScaleLabelMargin * pixelRatio
   const labelBottomExtraSpace = fontSize + labelOffset
   const labelX = x + (labelOnRight ? width : 0)
+  const labelUnderlayPadding = chartScaleLabelUnderlayPadding * pixelRatio
+  const labelUnderlayHeight = fontSize + labelUnderlayPadding * 2
 
   const yPerValue = (height - topPadding) / (toValue - fromValue || 1)
   const realFromValue = fromValue - (yPerValue === 0 ? 0 : labelBottomExtraSpace / yPerValue)
@@ -88,8 +94,22 @@ export default function drawValueScale({
     }
 
     if (labelOpacity > 0 && notchY > y + labelOffset) {
+      const text = formatNumberToShortForm(value)
+
+      // Underlay for better number visibility
+      if (chartScaleLabelUnderlayOpacity > 0) {
+        const width = Math.round(ctx.measureText(text).width) + labelUnderlayPadding * 2
+        ctx.fillStyle = numberColorToRGBA(backgroundColor, chartScaleLabelUnderlayOpacity * labelOpacity * opacity)
+        ctx.fillRect(
+          labelX - (labelOnRight ? width - labelUnderlayPadding : labelUnderlayPadding),
+          notchY - labelOffset + labelUnderlayPadding - labelUnderlayHeight,
+          width,
+          labelUnderlayHeight,
+        )
+      }
+
       ctx.fillStyle = numberColorToRGBA(labelColor, labelOpacity * opacity)
-      ctx.fillText(formatNumberToShortForm(value), labelX, notchY - labelOffset)
+      ctx.fillText(text, labelX, notchY - labelOffset)
     }
   }
 }
