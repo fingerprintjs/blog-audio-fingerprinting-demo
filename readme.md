@@ -1,4 +1,4 @@
-# Audio fingerprint article demos
+# [Audio fingerprint article](https://fingerprintjs.com/blog/audio-fingerprinting/) interactive demos
 
 ## Usage
 
